@@ -55,7 +55,7 @@ python github_search.py "agent" --language python --json
 
 #### Example Output
 
-Running `python github_search.py "news" --limit 5` will display:
+Running `python github_search.py "news"` will display (showing top 5 results for brevity):
 
 ```text
 ┌─────┬───────────────────────────┬──────────┬─────────────┬────────────┬──────────────┬──────┬───────────────────────┐
