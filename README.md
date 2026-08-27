@@ -55,22 +55,32 @@ python github_search.py "agent" --language python --json
 
 #### Example Output
 
-Running `python github_search.py` and typing `news` will display:
+Running `python github_search.py "news" --limit 5` will display:
 
 ```text
-Search query: news
-#   Repo                      Stars   Match Score  Status  Last Push   Link
---  ------------------------  ------  -----------  ------  ----------  -------------------------------------------
-1   georgringer/news          285     28.07        Active  2026-08-18  https://github.com/georgringer/news
-2   Wscats/news               363     26.34        Active  2026-03-31  https://github.com/Wscats/news
-3   nextcloud/news            995     23.7         Active  2026-08-26  https://github.com/nextcloud/news
-4   Polymer/news              265     18.75        Active  2026-06-20  https://github.com/Polymer/news
-5   zkeq/news                 169     18.74        Active  2023-09-15  https://github.com/zkeq/news
-6   codelucas/newspaper       15.144  18.61        Active  2026-08-09  https://github.com/codelucas/newspaper
-7   ourongxing/newsnow        21.522  17.8         Active  2026-07-07  https://github.com/ourongxing/newsnow
-8   dotnet-architecture/News  1.121   16.43        Active  2023-03-23  https://github.com/dotnet-architecture/News
-9   AkshayChordiya/News       843     16.36        Active  2020-11-03  https://github.com/AkshayChordiya/News
-10  fhamborg/news-please      2.483   16.34        Active  2026-04-14  https://github.com/fhamborg/news-please
+┌─────┬───────────────────────────┬──────────┬─────────────┬────────────┬──────────────┬──────┬───────────────────────┐
+│   # │ Repository                │    Stars │ Match Score │ Status     │ Last Push    │ URL  │ Description           │
+├─────┼───────────────────────────┼──────────┼─────────────┼────────────┼──────────────┼──────┼───────────────────────┤
+│   1 │ georgringer/              │      285 │       28.07 │ Active     │ 2026-08-18   │ Link │ TYPO3 Extension news  │
+│     │ news                      │          │             │            │              │      │                       │
+├─────┼───────────────────────────┼──────────┼─────────────┼────────────┼──────────────┼──────┼───────────────────────┤
+│   2 │ Wscats/                   │      363 │       26.34 │ Active     │ 2026-03-31   │ Link │ 🐼Based on            │
+│     │ news                      │          │             │            │              │      │ angular.js, weui and  │
+│     │                           │          │             │            │              │      │ node.js rewrite news  │
+│     │                           │          │             │            │              │      │ client - 新闻客户端   │
+├─────┼───────────────────────────┼──────────┼─────────────┼────────────┼──────────────┼──────┼───────────────────────┤
+│   3 │ nextcloud/                │      995 │        23.7 │ Active     │ 2026-08-26   │ Link │ 📰 RSS/Atom feed      │
+│     │ news                      │          │             │            │              │      │ reader                │
+├─────┼───────────────────────────┼──────────┼─────────────┼────────────┼──────────────┼──────┼───────────────────────┤
+│   4 │ Polymer/                  │      265 │       18.75 │ Active     │ 2026-06-20   │ Link │ Polymer News          │
+│     │ news                      │          │             │            │              │      │ (Progress Web App     │
+│     │                           │          │             │            │              │      │ Template)             │
+├─────┼───────────────────────────┼──────────┼─────────────┼────────────┼──────────────┼──────┼───────────────────────┤
+│   5 │ zkeq/                     │      169 │       18.74 │ Active     │ 2023-09-15   │ Link │ 前后端均基于 vercel   │
+│     │ news                      │          │             │            │              │      │ 的轻量级每日早报项目… │
+│     │                           │          │             │            │              │      │ FastAPI +             │
+│     │                           │          │             │            │              │      │ BeautifulSoup 实现。  │
+└─────┴───────────────────────────┴──────────┴─────────────┴────────────┴──────────────┴──────┴───────────────────────┘
 ```
 
 ---

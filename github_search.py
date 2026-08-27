@@ -44,6 +44,13 @@ POOL_SIZE = 40
 CACHE_DIR = os.path.expanduser(os.path.join("~", ".cache", "github-search"))
 CACHE_TTL = 3600  # 1 saat (saniye cinsinden)
 
+SETTINGS = {
+    "limit": DEFAULT_LIMIT,
+    "min_stars": 0,
+    "language": ""
+}
+
+
 GENERIC_STOPWORDS = {
     "api", "apis", "wrapper", "wrappers", "unofficial", "official",
     "client", "clients", "sdk", "cli", "tool", "tools", "library",
@@ -394,27 +401,90 @@ def format_date(iso_date: str) -> str:
 
 def print_rich_table(items: list):
     """Arama sonuçlarını terminalde tablo olarak basar."""
-    table = Table(show_header=True, header_style="bold magenta", border_style="dim")
+    table = Table(show_header=True, header_style="bold magenta", border_style="dim", show_lines=True)
     table.add_column("#", width=3, justify="right")
     table.add_column("Repository", style="cyan", width=25)
     table.add_column("Stars", justify="right", width=8)
     table.add_column("Match Score", justify="right", style="bold yellow")
     table.add_column("Status", width=10)
     table.add_column("Last Push", width=12)
-    table.add_column("Description", width=40)
+    table.add_column("URL", style="blue underline")
+    table.add_column("Description")
 
     for i, repo in enumerate(items, 1):
         status = "[red]Archived[/red]" if repo.get("archived") else "[green]Active[/green]"
+        
+        repo_name = repo.get("full_name", "-")
+        if "/" in repo_name:
+            parts = repo_name.split("/", 1)
+            repo_name_formatted = f"{parts[0]}/\n{parts[1]}"
+        else:
+            repo_name_formatted = repo_name
+        
+        html_url = repo.get("html_url", "")
+        repo_display = f"[link={html_url}]{repo_name_formatted}[/link]" if html_url else repo_name_formatted
+        url_display = f"[link={html_url}]Link[/link]" if html_url else "-"
+        
+        desc = repo.get("description") or ""
+        if len(desc) > 80:
+            desc = desc[:77] + "..."
+        
         table.add_row(
             str(i),
-            repo.get("full_name", "-"),
+            repo_display,
             f"{repo.get('stargazers_count', 0):,}",
             str(repo["_score"]["final_score"]),
             status,
             format_date(repo.get("pushed_at", "")),
-            (repo.get("description") or "")[:38] + ("..." if len(repo.get("description") or "") > 38 else "")
+            url_display,
+            desc
         )
     console.print(table)
+
+
+
+def print_logo():
+    logo_art = r"""
+  ____ _ _   _   _       _       ____                      _     
+ / ___(_) |_| | | |_   _| |__   / ___|  ___  __ _ _ __ ___| |__  
+| |  _| | __| |_| | | | | '_ \  \___ \ / _ \/ _` | '__/ __| '_ \ 
+| |_| | | |_|  _  | |_| | |_) |  ___) |  __/ (_| | | | (__| | | |
+ \____|_|\__|_| |_|\__,_|_.__/  |____/ \___|\__,_|_|  \___|_| |_|
+"""
+    if RICH_AVAILABLE:
+        console.print(Panel(
+            Align.center(
+                f"[bold magenta]{logo_art}[/bold magenta]\n"
+                "[dim]Explainable Repository Ranking Engine & CLI Tool[/dim]"
+            ),
+            border_style="magenta"
+        ))
+    else:
+        print(logo_art)
+        print("Explainable Repository Ranking Engine & CLI Tool")
+
+
+def configure_settings():
+    if RICH_AVAILABLE:
+        console.print("\n[bold cyan]Edit Search Settings:[/bold cyan]")
+        SETTINGS["limit"] = IntPrompt.ask("Maximum results limit", default=SETTINGS["limit"])
+        SETTINGS["min_stars"] = IntPrompt.ask("Minimum stars", default=SETTINGS["min_stars"])
+        SETTINGS["language"] = Prompt.ask("Programming language filter (can be empty)", default=SETTINGS["language"]).strip()
+        console.print("[bold green]Settings updated![/bold green]")
+    else:
+        print("\nEdit Search Settings:")
+        try:
+            limit_val = input(f"Maximum results limit [{SETTINGS['limit']}]: ").strip()
+            if limit_val:
+                SETTINGS["limit"] = int(limit_val)
+            stars_val = input(f"Minimum stars [{SETTINGS['min_stars']}]: ").strip()
+            if stars_val:
+                SETTINGS["min_stars"] = int(stars_val)
+            lang_val = input(f"Programming language filter [{SETTINGS['language']}]: ").strip()
+            SETTINGS["language"] = lang_val
+            print("Settings updated!")
+        except ValueError:
+            print("Invalid input, settings not updated.")
 
 
 def interactive_explorer_loop(items: list):
@@ -427,7 +497,7 @@ def interactive_explorer_loop(items: list):
         console.print("  [bold yellow][1-N][/bold yellow] : View repo score analysis")
         console.print("  [bold yellow]o <no>[/bold yellow]: Open in browser (e.g. o 1)")
         console.print("  [bold yellow]n[/bold yellow]     : New Search")
-        console.print("  [bold yellow]m[/bold yellow]     : Main Menu")
+        console.print("  [bold yellow]m[/bold yellow]     : Back to Search")
         console.print("  [bold yellow]q[/bold yellow]     : Exit")
 
         choice = Prompt.ask("\nYour choice").strip().lower()
@@ -442,7 +512,12 @@ def interactive_explorer_loop(items: list):
         elif choice == 'n':
             query = Prompt.ask("\nNew Search Query")
             if query:
-                new_items = search_repos(query, DEFAULT_LIMIT)
+                new_items = search_repos(
+                    query, 
+                    limit=SETTINGS["limit"], 
+                    min_stars=SETTINGS["min_stars"], 
+                    language=SETTINGS["language"]
+                )
                 if new_items:
                     print_rich_table(new_items)
                     items = new_items
@@ -479,40 +554,44 @@ def interactive_explorer_loop(items: list):
 
 def interactive_menu():
     """Tüm aracı yöneten ana interaktif rich menüsü."""
-    settings = {
-        "limit": DEFAULT_LIMIT,
-        "min_stars": 0,
-        "language": ""
-    }
+    print_logo()
 
     while True:
-        console.clear()
-        console.print(Panel(
-            Align.center(
-                "[bold magenta]GITHUB SEARCH ENGINE[/bold magenta]\n"
-                "[dim]Explainable Repository Ranking Engine & CLI Tool[/dim]"
-            ),
-            border_style="magenta"
-        ))
+        if RICH_AVAILABLE:
+            query = Prompt.ask("\n[bold cyan]Search query[/bold cyan] (type [bold yellow]/setting[/bold yellow] for settings, [bold yellow]q[/bold yellow] to exit)").strip()
+        else:
+            query = input("\nSearch query (type /setting for settings, q to exit): ").strip()
 
-        console.print("[bold cyan]Main Menu:[/bold cyan]")
-        console.print("  [bold yellow]1.[/bold yellow] Search Projects")
-        console.print("  [bold yellow]2.[/bold yellow] Search Settings")
-        console.print("  [bold yellow]3.[/bold yellow] Clear Cache")
-        console.print("  [bold yellow]4.[/bold yellow] Exit")
+        if not query:
+            continue
 
-        choice = Prompt.ask("\nYour choice", choices=["1", "2", "3", "4"], default="1")
+        if query.lower() in ("q", "quit", "exit"):
+            if RICH_AVAILABLE:
+                console.print("[bold red]Goodbye![/bold red]")
+            else:
+                print("Goodbye!")
+            sys.exit(0)
 
-        if choice == "1":
-            query = Prompt.ask("\nQuery to search")
-            if not query:
-                continue
+        elif query.lower() == "/setting":
+            configure_settings()
+            continue
+
+        elif query.lower() == "/clear":
+            clear_all_cache()
+            if RICH_AVAILABLE:
+                console.print("[bold green]Cache cleared successfully![/bold green]")
+            else:
+                print("Cache cleared successfully!")
+            continue
+
+        # Normal search
+        if RICH_AVAILABLE:
             with console.status("[bold green]Scanning GitHub and calculating ranking..."):
                 items = search_repos(
                     query, 
-                    limit=settings["limit"], 
-                    min_stars=settings["min_stars"], 
-                    language=settings["language"]
+                    limit=SETTINGS["limit"], 
+                    min_stars=SETTINGS["min_stars"], 
+                    language=SETTINGS["language"]
                 )
             if items:
                 console.print(f"\n[bold green]Ranked top results for '{query}':[/bold green]\n")
@@ -520,24 +599,18 @@ def interactive_menu():
                 interactive_explorer_loop(items)
             else:
                 console.print("[bold red]No results found or filters not matched.[/bold red]")
-                Prompt.ask("\nPress Enter to continue")
-
-        elif choice == "2":
-            console.print("\n[bold cyan]Edit Search Settings:[/bold cyan]")
-            settings["limit"] = IntPrompt.ask("Maximum results limit", default=settings["limit"])
-            settings["min_stars"] = IntPrompt.ask("Minimum stars", default=settings["min_stars"])
-            settings["language"] = Prompt.ask("Programming language filter (can be empty)", default=settings["language"]).strip()
-            console.print("[bold green]Settings updated![/bold green]")
-            Prompt.ask("\nPress Enter to continue")
-
-        elif choice == "3":
-            clear_all_cache()
-            console.print("[bold green]Cache cleared successfully![/bold green]")
-            Prompt.ask("\nPress Enter to continue")
-
-        elif choice == "4":
-            console.print("[bold red]Goodbye![/bold red]")
-            sys.exit(0)
+        else:
+            items = search_repos(
+                query, 
+                limit=SETTINGS["limit"], 
+                min_stars=SETTINGS["min_stars"], 
+                language=SETTINGS["language"]
+            )
+            if items:
+                print(f"\nRanked top results for '{query}':\n")
+                print_simple_table(items)
+            else:
+                print("No results found or filters not matched.")
 
 
 def print_simple_table(items: list):
@@ -589,17 +662,14 @@ def main():
 
     args = parser.parse_args()
 
-    # Query verilmediyse ve terminal zengin arayüzü destekliyorsa direkt menü aç
+    # Initialize global settings from arguments
+    SETTINGS["limit"] = args.limit
+    SETTINGS["min_stars"] = args.min_stars
+    SETTINGS["language"] = args.language
+
+    # Query verilmediyse direkt menü aç
     if args.query is None:
-        if RICH_AVAILABLE:
-            interactive_menu()
-        else:
-            query = input("Search query: ").strip()
-            if not query:
-                print("Empty query entered, exiting.")
-                sys.exit(1)
-            items = search_repos(query, args.limit, args.min_stars, args.language)
-            print_simple_table(items)
+        interactive_menu()
         return
 
     # CLI üzerinden arama çalıştırılıyor
